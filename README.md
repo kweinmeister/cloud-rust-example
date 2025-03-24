@@ -1,4 +1,4 @@
-# cloud-rust
+# cloud-rust-example
 
 This is an example web application built using the [axum](https://github.com/tokio-rs/axum) framework in Rust, designed for deployment on Google Cloud Run. The application was derived from the axum [hello-world example](https://github.com/tokio-rs/axum/blob/main/examples/hello-world).
 
@@ -45,7 +45,7 @@ Replace `your-project-id` with your actual project ID.
 To deploy the application to Cloud Run, use the following command:
 
 ```bash
-gcloud run deploy cloud-rust \
+gcloud run deploy cloud-rust-example \
     --source . \
     --region us-central1 \
     --allow-unauthenticated
