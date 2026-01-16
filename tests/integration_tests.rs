@@ -5,6 +5,9 @@ use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::time::sleep;
 
+const MAX_RETRIES: usize = 30;
+const RETRY_DELAY_MS: u64 = 100;
+
 #[fixture]
 fn creds_file() -> NamedTempFile {
     let mut creds_file = NamedTempFile::new().expect("Failed to create temp file");
@@ -31,6 +34,24 @@ fn port() -> u16 {
     listener.local_addr().unwrap().port()
 }
 
+async fn wait_for_server_ready(port: u16) {
+    let client = reqwest::Client::new();
+    let url = format!("http://127.0.0.1:{}", port);
+    let mut ready = false;
+
+    for _ in 0..MAX_RETRIES {
+        if let Ok(resp) = client.get(&url).send().await {
+            if resp.status().is_success() {
+                ready = true;
+                break;
+            }
+        }
+        sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
+    }
+
+    assert!(ready, "Server never became ready");
+}
+
 #[rstest]
 #[tokio::test]
 async fn test_main_starts_and_serves_requests(creds_file: NamedTempFile, port: u16) {
@@ -43,26 +64,19 @@ async fn test_main_starts_and_serves_requests(creds_file: NamedTempFile, port: u
         .spawn()
         .expect("Failed to spawn cloud-rust binary");
 
+    wait_for_server_ready(port).await;
+
     let client = reqwest::Client::new();
     let url = format!("http://127.0.0.1:{}", port);
-    let mut ready = false;
-
-    for _ in 0..30 {
-        if let Ok(resp) = client.get(&url).send().await {
-            if resp.status().is_success() {
-                ready = true;
-
-                let text = resp.text().await.unwrap();
-                assert!(text.contains("Hello, World!"));
-                break;
-            }
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .expect("Failed to request root");
+    let text = resp.text().await.unwrap();
+    assert!(text.contains("Hello, World!"));
 
     child.kill().expect("Failed to kill child process");
-
-    assert!(ready, "Server never became ready or returned success");
 }
 
 #[rstest]
@@ -78,22 +92,10 @@ async fn test_project_endpoint_handles_network_failure(creds_file: NamedTempFile
         .spawn()
         .expect("Failed to spawn cloud-rust binary");
 
-    let client = reqwest::Client::new();
-    let root_url = format!("http://127.0.0.1:{}", port);
-    let project_url = format!("http://127.0.0.1:{}/project", port);
+    wait_for_server_ready(port).await;
 
-    // Wait for server to be ready
-    let mut ready = false;
-    for _ in 0..30 {
-        if let Ok(resp) = client.get(&root_url).send().await {
-            if resp.status().is_success() {
-                ready = true;
-                break;
-            }
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    assert!(ready, "Server never became ready");
+    let client = reqwest::Client::new();
+    let project_url = format!("http://127.0.0.1:{}/project", port);
 
     let resp = client
         .get(&project_url)
