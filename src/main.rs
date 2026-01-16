@@ -1,6 +1,5 @@
 use axum::{Router, extract::Extension, response::Html, routing::get};
 use google_cloud_resourcemanager_v3::client::Projects;
-use reqwest;
 use std::{
     env::var,
     sync::{Arc, OnceLock},

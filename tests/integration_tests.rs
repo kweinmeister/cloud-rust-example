@@ -1,11 +1,12 @@
-use std::process::Command;
+use rstest::*;
 use std::io::Write;
-use tempfile::NamedTempFile;
+use std::process::Command;
 use std::time::Duration;
+use tempfile::NamedTempFile;
 use tokio::time::sleep;
 
-#[tokio::test]
-async fn test_main_starts_and_serves_requests() {
+#[fixture]
+fn creds_file() -> NamedTempFile {
     let mut creds_file = NamedTempFile::new().expect("Failed to create temp file");
     let creds_json = r#"{
         "type": "service_account",
@@ -21,13 +22,19 @@ async fn test_main_starts_and_serves_requests() {
         "universe_domain": "googleapis.com"
     }"#;
     write!(creds_file, "{}", creds_json).expect("Failed to write to temp creds file");
+    creds_file
+}
+
+#[fixture]
+fn port() -> u16 {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.local_addr().unwrap().port()
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_main_starts_and_serves_requests(creds_file: NamedTempFile, port: u16) {
     let creds_path = creds_file.path().to_owned();
-
-    let port = {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        listener.local_addr().unwrap().port()
-    };
-
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_cloud-rust"));
     let mut child = cmd
         .env("PORT", port.to_string())
@@ -44,7 +51,7 @@ async fn test_main_starts_and_serves_requests() {
         if let Ok(resp) = client.get(&url).send().await {
             if resp.status().is_success() {
                 ready = true;
-                
+
                 let text = resp.text().await.unwrap();
                 assert!(text.contains("Hello, World!"));
                 break;
@@ -54,6 +61,53 @@ async fn test_main_starts_and_serves_requests() {
     }
 
     child.kill().expect("Failed to kill child process");
-    
+
     assert!(ready, "Server never became ready or returned success");
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_project_endpoint_handles_network_failure(creds_file: NamedTempFile, port: u16) {
+    let creds_path = creds_file.path().to_owned();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_cloud-rust"));
+    let mut child = cmd
+        .env("PORT", port.to_string())
+        .env("GOOGLE_CLOUD_PROJECT", "test-project")
+        .env("GOOGLE_APPLICATION_CREDENTIALS", creds_path)
+        .env("HTTPS_PROXY", "http://0.0.0.0:0") // Force connection failure locally
+        .spawn()
+        .expect("Failed to spawn cloud-rust binary");
+
+    let client = reqwest::Client::new();
+    let root_url = format!("http://127.0.0.1:{}", port);
+    let project_url = format!("http://127.0.0.1:{}/project", port);
+
+    // Wait for server to be ready
+    let mut ready = false;
+    for _ in 0..30 {
+        if let Ok(resp) = client.get(&root_url).send().await {
+            if resp.status().is_success() {
+                ready = true;
+                break;
+            }
+        }
+        sleep(Duration::from_millis(100)).await;
+    }
+    assert!(ready, "Server never became ready");
+
+    let resp = client
+        .get(&project_url)
+        .send()
+        .await
+        .expect("Failed to send request to /project");
+
+    assert!(resp.status().is_success());
+    let text = resp.text().await.unwrap();
+    assert!(
+        text.contains("Error getting project info"),
+        "Response did not contain expected error message. Got: {}",
+        text
+    );
+
+    child.kill().expect("Failed to kill child process");
 }
