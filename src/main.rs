@@ -1,6 +1,5 @@
 use axum::{Router, extract::Extension, response::Html, routing::get};
 use google_cloud_resourcemanager_v3::client::Projects;
-use reqwest;
 use std::{
     env::var,
     sync::{Arc, OnceLock},
@@ -12,7 +11,7 @@ static PROJECT_ID: OnceLock<String> = OnceLock::new();
 #[tokio::main]
 async fn main() {
     // create a the Resource Manager Projects client
-    let client = Projects::new().await.unwrap();
+    let client = Projects::builder().build().await.unwrap();
 
     // get the project ID
     let project_id = get_project_id().await.expect("Failed to get project ID");
@@ -44,7 +43,7 @@ async fn project_handler(Extension(client): Extension<Arc<Projects>>) -> Html<St
     let project_id = PROJECT_ID.get().expect("Project ID not initialized");
     let project_name = format!("projects/{}", project_id);
 
-    match client.get_project(project_name).send().await {
+    match client.get_project().set_name(project_name).send().await {
         Ok(project) => {
             let project_number = project.name.strip_prefix("projects/").unwrap_or("Unknown");
 
