@@ -226,7 +226,7 @@ dependencies = [
  "axum",
  "google-cloud-resourcemanager-v3",
  "predicates",
- "reqwest 0.13.1",
+ "reqwest 0.13.2",
  "rstest",
  "tempfile",
  "tokio",
@@ -542,7 +542,7 @@ dependencies = [
  "bytes",
  "google-cloud-gax",
  "http",
- "reqwest 0.13.1",
+ "reqwest 0.13.2",
  "rustc_version",
  "rustls",
  "rustls-pki-types",
@@ -575,9 +575,9 @@ dependencies = [
 
 [[package]]
 name = "google-cloud-gax-internal"
-version = "0.7.8"
+version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3243e16dfc4cf73e3bf3d4813e910d4b1f2ded87900b0bce78dd75c95cdaadf"
+checksum = "598e5ffec2c1c9b43e83847b2badc0f128a03e541b75f1ecd8acf0a2605c40cf"
 dependencies = [
  "bytes",
  "futures",
@@ -589,7 +589,7 @@ dependencies = [
  "hyper",
  "opentelemetry-semantic-conventions",
  "percent-encoding",
- "reqwest 0.13.1",
+ "reqwest 0.13.2",
  "rustc_version",
  "serde",
  "serde_json",
@@ -655,9 +655,9 @@ dependencies = [
 
 [[package]]
 name = "google-cloud-resourcemanager-v3"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5943674ac5b26625dccd34beb24154919e2b743c3f07166af6912879676bd0b6"
+checksum = "fc045dd316f4f5ac71338f1d13ba539c752386bd1ac9bedebb78d34b14e862fd"
 dependencies = [
  "async-trait",
  "bytes",
@@ -668,7 +668,6 @@ dependencies = [
  "google-cloud-lro",
  "google-cloud-wkt",
  "lazy_static",
- "reqwest 0.13.1",
  "serde",
  "serde_json",
  "serde_with",
@@ -1540,9 +1539,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04e9018c9d814e5f30cc16a0f03271aeab3571e609612d9fe78c1aa8d11c2f62"
+checksum = "ab3f43e3283ab1488b624b44b0e988d0acea0b3214e694730a055cb6b2efa801"
 dependencies = [
  "base64",
  "bytes",
